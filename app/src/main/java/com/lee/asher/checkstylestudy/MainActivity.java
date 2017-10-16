@@ -12,5 +12,9 @@ public class MainActivity extends AppCompatActivity {
         if(1 > 2) {
 
         }
+
+        for(int i = 0; i <10 ; i++) {
+
+        }
     }
 }

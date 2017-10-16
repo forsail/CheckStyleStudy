@@ -12,6 +12,7 @@ def checkstyleOnlyAdd = "onlyAdd" == rootProject.ext.checkstyle
 
 task ensureGitHookFile {
     if (project.file(".git").exists()) { //combine中的module
+        log("init pre-commit")
         if (checkstyleEnable) {
             if (rootProject.file(".git/hooks/pre-commit").exists()) {
                 return
