@@ -1,0 +1,118 @@
+apply plugin: 'checkstyle'
+checkstyle {
+    ignoreFailures false
+    showViolations true
+    configFile rootProject.file('checkstyle.xml')
+    toolVersion = '7.3'
+}
+def checkstyleEnable = "on" == rootProject.ext.checkstyle || "onlyAdd" == rootProject.ext.checkstyle
+def checkstyleOnlyAdd = "onlyAdd" == rootProject.ext.checkstyle
+
+//log("checkstyleEnable=${checkstyleEnable},checkstyleOnlyAdd=${checkstyleOnlyAdd}")
+
+task ensureGitHookFile {
+    if (project.file(".git").exists()) { //combine中的module
+        if (checkstyleEnable) {
+            if (rootProject.file(".git/hooks/pre-commit").exists()) {
+                return
+            }
+            def source = rootProject.file('pre-commit')
+            def dest = rootProject.file('./.git/hooks')
+            copyFile(source, dest)
+        } else {
+            def task = tasks.findByName("checkCodestyle")
+            if (task != null) {
+                log("task=${task}")
+                task.enabled = false
+            }
+            rootProject.file('./.git/hooks/pre-commit').delete()
+        }
+    }
+}
+
+task checkCodeStyle(type: Checkstyle) {
+    source 'src/main/java'
+
+    exclude '**/gen/**'
+    exclude '**/R.java'
+    exclude '**/BuildConfig.java'
+    if (!checkstyleEnable) {
+        exclude '**/*.java'
+        return
+    }
+
+    if (project.hasProperty('checkCommit') && project.property("checkCommit")) {
+        def ft = filterCommitter(getChangeFiles(), checkstyleOnlyAdd);
+        def includeList = new ArrayList<String>()
+        for (int i = 0; i < ft.size(); i++) {
+            String spliter = ft.getAt(i)
+            String[] spliterlist = spliter.split("/")
+            String fileName = spliterlist[spliterlist.length - 1]
+            includeList.add("**/" + fileName)
+            log("fileName=${fileName}")
+        }
+        if (includeList.size() == 0) {
+            exclude '**/*.java'
+        } else {
+            include includeList
+        }
+    } else {
+        include '**/*.java'
+    }
+    configFile rootProject.file('checkstyle.xml')
+    classpath = files()
+}
+
+/**
+ * 拷贝指定文件到目录下例如copyFile('./work/jsch-0.1.53.jar', './build')
+ * @param source
+ * @param target
+ * @return
+ */
+def copyFile(source, target) {
+    log("from:${source},target:${target}")
+    copy {
+        from source
+        into target
+    }
+}
+
+
+def filterCommitter(String gitstatusinfo, boolean onlyAdd) {
+    ArrayList<String> filterList = new ArrayList<String>();
+    String[] lines = gitstatusinfo.split("\\n")
+    for (String line : lines) {
+        if (line.contains(".java")) {
+            String[] spliters = line.trim().split(" ");
+            def canAdd = true
+            if (onlyAdd) {
+                canAdd = spliters[0] == "AM" || spliters[0] == "A"
+            }
+            for (String str : spliters) {
+                if (canAdd && str.contains(".java")) {
+                    filterList.add(str)
+                }
+            }
+        }
+    }
+    return filterList;
+}
+
+def getChangeFiles() {
+    try {
+
+        def dir = project.projectDir
+        if (project.name == 'app') {
+            dir = rootProject.rootDir
+        }
+        String changeInfo = 'git status -s'.execute(null, dir).text.trim()
+        log("project-${project.name},changefile=${changeInfo}")
+        return changeInfo == null ? "" : changeInfo
+    } catch (Exception e) {
+        return ""
+    }
+}
+
+def log(String msg) {
+    println "********** $msg **********"
+}
