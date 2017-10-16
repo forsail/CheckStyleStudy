@@ -31,5 +31,7 @@ dependencies {
 }
 
 task hello {
-    print("hello task")
+    doFirst {
+        println("hello task")
+    }
 }

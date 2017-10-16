@@ -14,7 +14,8 @@ task ensureGitHookFile {
     if (project.file("${project.file('src').getParentFile().getParent()}/.git").exists()) {
         log("init pre-commit")
         if (checkstyleEnable) {
-            if (rootProject.file(".git/hooks/pre-commit").exists()) {
+            if (rootProject.file("${project.file('src').getParentFile().getParent()}/.git/hooks/pre-commit").exists()) {
+                log("pre-commit already exist")
                 return
             }
             def source = rootProject.file('pre-commit')
